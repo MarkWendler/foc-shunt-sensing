@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Single-Shunt ADC &amp; Modulation Calculator</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a212b; --panel2:#222c38; --line:#2e3a48;
+    --txt:#e6edf3; --muted:#9aa7b4; --accent:#4da3ff; --ok:#37c871;
+    --warn:#f0a93b; --bad:#ef5b5b; --a:#ef5b5b; --b:#37c871; --c:#4da3ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--txt);line-height:1.5}
+  header{padding:22px 26px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{margin:0 0 4px;font-size:20px}
+  header p{margin:0;color:var(--muted);font-size:13px;max-width:900px}
+  header code{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 22px 60px}
+  .tabs{display:flex;gap:6px;margin:14px 0 18px;flex-wrap:wrap}
+  .tabs button{background:var(--panel);color:var(--muted);border:1px solid var(--line);
+    padding:9px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+  .tabs button.active{background:var(--accent);color:#07121f;border-color:var(--accent)}
+  .tab{display:none}
+  .tab.active{display:block}
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:22px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .panel h2{margin:0 0 12px;font-size:15px;letter-spacing:.02em;color:var(--txt)}
+  .ctrl{margin-bottom:16px}
+  .ctrl label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
+  .ctrl label b{color:var(--accent);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .readout{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .readout .row{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
+  .readout .row span:first-child{color:var(--muted)}
+  .readout .row span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
+  .big{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;margin:2px 0 2px}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .pill.ok{background:rgba(55,200,113,.16);color:var(--ok)}
+  .pill.warn{background:rgba(240,169,59,.16);color:var(--warn)}
+  .pill.bad{background:rgba(239,91,91,.16);color:var(--bad)}
+  .interp{font-size:13px;color:var(--muted);margin-top:8px}
+  .note{font-size:12px;color:var(--muted);margin-top:10px}
+  .eqn{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+       background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:#cbd5e1;margin-top:8px}
+  .plot{width:100%;height:430px}
+  .small{height:300px}
+  a{color:var(--accent)}
+  footer{color:var(--muted);font-size:12px;padding:18px 26px;border-top:1px solid var(--line)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:600px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Single-Shunt Current Sensing &mdash; ADC &amp; Modulation-Index Calculator</h1>
+  <p>Interactive companion to <em>&ldquo;Acquisition-Time Limited Modulation in Single-Shunt Current Reconstruction for PMSM FOC&rdquo;</em>.
+     The usable modulation index is set by the analog acquisition budget
+     <code>t_req = t_acq + t_blank + t_margin</code> and the PWM period <code>T_sw = 1/f_sw</code>, not by ADC throughput.</p>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button data-tab="calc" class="active">1 · t_req → m_max</button>
+    <button data-tab="hex">2 · SVM hexagon &amp; blind zones</button>
+    <button data-tab="duty">3 · Duty cycles &amp; PWM period</button>
+  </div>
+
+  <!-- shared controls live in each tab's sidebar; values are global -->
+
+  <!-- ===================== TAB 1 ===================== -->
+  <section id="calc" class="tab active">
+    <div class="grid">
+      <div class="panel">
+        <h2>Timing inputs</h2>
+        <div class="ctrl"><label>ADC settling t_acc(ADC) <b id="o_adc">150 ns</b></label>
+          <input id="adc" type="range" min="20" max="800" step="10" value="150"></div>
+        <div class="ctrl"><label>Op-amp / PGA settling <b id="o_op">600 ns</b></label>
+          <input id="op" type="range" min="0" max="2000" step="25" value="600"></div>
+        <div class="ctrl"><label>Blanking + margin <b id="o_bm">300 ns</b></label>
+          <input id="bm" type="range" min="0" max="1500" step="25" value="300"></div>
+        <div class="ctrl"><label>PWM frequency f_sw <b id="o_fsw">20 kHz</b></label>
+          <input id="fsw" type="range" min="4" max="150" step="1" value="20"></div>
+        <div class="ctrl"><label>Modulation index m (for blind check) <b id="o_m">0.80</b></label>
+          <input id="m" type="range" min="0" max="1.15" step="0.01" value="0.80"></div>
+        <div class="eqn">m_max,SS = min(1, (2/&radic;3)·(1 − 2·t_req/T_sw))<br>
+          m_max,dual = 1 − 2·t_req/T_sw &nbsp;·&nbsp; m_min,SS = 4·t_req/T_sw</div>
+      </div>
+
+      <div>
+        <div class="two">
+          <div class="readout">
+            <div style="color:var(--muted);font-size:13px">Single-shunt m_max (full-angle)</div>
+            <div class="big" id="r_mss">—</div>
+            <div class="row"><span>d_max,SS</span><span id="r_dss">—</span></div>
+            <div class="row"><span>m_min,SS (existence)</span><span id="r_mmin">—</span></div>
+            <div class="row"><span>blind half-angle @ m</span><span id="r_blind">—</span></div>
+            <div id="r_status"></div>
+          </div>
+          <div class="readout">
+            <div style="color:var(--muted);font-size:13px">Budget</div>
+            <div class="row"><span>t_acq = ADC + op-amp</span><span id="r_tacq">—</span></div>
+            <div class="row"><span>t_req</span><span id="r_treq">—</span></div>
+            <div class="row"><span>T_sw</span><span id="r_tsw">—</span></div>
+            <div class="row"><span>dual-shunt m_max</span><span id="r_mdual">—</span></div>
+            <div class="row"><span>d_max,dual</span><span id="r_ddual">—</span></div>
+            <div class="interp" id="r_interp"></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <h2>m_max vs switching frequency (current t_req)</h2>
+          <div id="plot_sweep" class="plot small"></div>
+          <div class="note">Solid = single-shunt full-angle bound; dashed = dual-shunt bound. The vertical marker is the selected f_sw.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 2 ===================== -->
+  <section id="hex" class="tab">
+    <div class="grid">
+      <div class="panel">
+        <h2>What this shows</h2>
+        <p style="font-size:13px;color:var(--muted)">
+          Reference-vector plane. The inner circle is the linear limit (m = 1). The green disk is the current operating
+          radius m. Red wedges centred on the six active-vector directions are the <b>blind zones</b> where one active-vector
+          dwell collapses below t_req, so single-shunt reconstruction fails without PWM shaping or estimation.</p>
+        <div class="eqn">α_blind = arcsin( 2·t_req / (m·T_sw) )</div>
+        <p class="note">Adjust the timing/frequency/m sliders (same as Tab 1). Wider wedges ⇒ less of the sector is measurable.</p>
+        <div class="readout" style="margin-top:14px">
+          <div class="row"><span>t_req</span><span id="h_treq">—</span></div>
+          <div class="row"><span>T_sw</span><span id="h_tsw">—</span></div>
+          <div class="row"><span>blind half-angle</span><span id="h_blind">—</span></div>
+          <div class="row"><span>measurable fraction / sector</span><span id="h_frac">—</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Reference-vector plane</h2>
+        <div id="plot_hex" class="plot" style="height:520px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 3 ===================== -->
+  <section id="duty" class="tab">
+    <div class="grid">
+      <div class="panel">
+        <h2>Operating point</h2>
+        <div class="ctrl"><label>Electrical angle θ <b id="o_th">45°</b></label>
+          <input id="th" type="range" min="0" max="360" step="1" value="45"></div>
+        <p class="note">m and the timing sliders are shared with the other tabs. The single-PWM-period view uses
+          the active-vector dwell times t1, t2 at the selected angle and flags any sample window shorter than t_req.</p>
+        <div class="readout" style="margin-top:8px">
+          <div class="row"><span>sector</span><span id="d_sec">—</span></div>
+          <div class="row"><span>in-sector angle γ</span><span id="d_gam">—</span></div>
+          <div class="row"><span>t1 (active V1)</span><span id="d_t1">—</span></div>
+          <div class="row"><span>t2 (active V2)</span><span id="d_t2">—</span></div>
+          <div class="row"><span>t_req</span><span id="d_treq">—</span></div>
+          <div id="d_status"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>SVM duty cycles vs angle</h2>
+        <div id="plot_duty" class="plot small"></div>
+        <h2 style="margin-top:14px">Inverter gate signals — one PWM period</h2>
+        <div id="plot_period" class="plot small"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  Static tool — runs entirely in your browser. Math: center-aligned SVM, m = V_ref/(V_dc/&radic;3).
+  Source &amp; paper in this repository.
+</footer>
+
+<script>
+const S3 = Math.sqrt(3);
+const $ = id => document.getElementById(id);
+
+// ---- global state from sliders ----
+function state(){
+  const adc=+$('adc').value, op=+$('op').value, bm=+$('bm').value;
+  const fsw=+$('fsw').value, m=+$('m').value, th=+$('th').value;
+  const t_acq=(adc+op)/1000;            // µs
+  const t_req=(adc+op+bm)/1000;         // µs
+  const Tsw=1000/fsw;                   // µs
+  return {adc,op,bm,fsw,m,th,t_acq,t_req,Tsw};
+}
+
+// ---- core formulas ----
+const mMaxSS   = (treq,Tsw)=>Math.max(0,Math.min(1,(2/S3)*(1-2*treq/Tsw)));
+const mMaxDual = (treq,Tsw)=>Math.max(0,Math.min(1,1-2*treq/Tsw));
+const mMinSS   = (treq,Tsw)=>4*treq/Tsw;
+const blindHalf= (treq,Tsw,m)=>{const x=2*treq/(m*Tsw); return x>=1?Math.PI/3:Math.asin(x);}; // rad, clamp to full sector
+
+// proper SVPWM (min-max injected) duties for plotting
+function svmDuties(m,theta){
+  const k=2*m/S3;
+  const a=k*Math.sin(theta), b=k*Math.sin(theta-2*Math.PI/3), c=k*Math.sin(theta+2*Math.PI/3);
+  const vcm=-(Math.max(a,b,c)+Math.min(a,b,c))/2;
+  return [0.5+0.5*(a+vcm),0.5+0.5*(b+vcm),0.5+0.5*(c+vcm)];
+}
+// sector + in-sector angle + dwell times (µs) for one half-carrier
+function dwell(m,theta,Tsw){
+  let t=((theta%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+  const sector=Math.floor(t/(Math.PI/3))%6+1;
+  const gamma=t-(sector-1)*(Math.PI/3);
+  const t1=(Tsw/2)*m*Math.sin(Math.PI/3-gamma);
+  const t2=(Tsw/2)*m*Math.sin(gamma);
+  return {sector,gamma,t1,t2};
+}
+
+const fmt=(x,d=3)=>Number(x).toFixed(d);
+const PLOTCFG={displayModeBar:false,responsive:true};
+const BASE_LAYOUT={paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+  font:{color:'#9aa7b4',size:12},margin:{l:48,r:16,t:10,b:40},showlegend:true,
+  legend:{orientation:'h',y:1.12,x:0,font:{color:'#cbd5e1'}}};
+const AX={gridcolor:'#2e3a48',zerolinecolor:'#3a4756',linecolor:'#3a4756'};
+
+// ===================== TAB 1 =====================
+function renderCalc(){
+  const s=state();
+  $('o_adc').textContent=s.adc+' ns'; $('o_op').textContent=s.op+' ns';
+  $('o_bm').textContent=s.bm+' ns';   $('o_fsw').textContent=s.fsw+' kHz';
+  $('o_m').textContent=fmt(s.m,2);
+  const mss=mMaxSS(s.t_req,s.Tsw), dss=(1+mss)/2;
+  const mmin=mMinSS(s.t_req,s.Tsw);
+  const mdual=mMaxDual(s.t_req,s.Tsw), ddual=(1+mdual)/2;
+  const bh=blindHalf(s.t_req,s.Tsw,s.m)*180/Math.PI;
+
+  $('r_mss').textContent=fmt(mss,3);
+  $('r_dss').textContent=fmt(dss,3)+'  ('+fmt(dss*100,1)+'%)';
+  $('r_mmin').textContent=fmt(mmin,3);
+  $('r_blind').textContent=(s.m<=0?'—':fmt(bh,1)+'°');
+  $('r_tacq').textContent=fmt(s.t_acq,2)+' µs';
+  $('r_treq').textContent=fmt(s.t_req,2)+' µs';
+  $('r_tsw').textContent=fmt(s.Tsw,2)+' µs';
+  $('r_mdual').textContent=fmt(mdual,3);
+  $('r_ddual').textContent=fmt(ddual,3);
+
+  // status pill: is requested m feasible full-angle?
+  let pill,txt;
+  if(s.m>mss){pill='bad';txt='m above single-shunt full-angle limit — needs blind-zone estimation';}
+  else if(s.m<mmin){pill='warn';txt='m below existence bound — sector centres also blind without shaping';}
+  else {pill='ok';txt='m within single-shunt full-angle reconstruction range';}
+  $('r_status').innerHTML='<div style="margin-top:8px"><span class="pill '+pill+'">'+txt+'</span></div>';
+
+  let interp,col;
+  if(mss>=0.95){interp='Excellent — near the linear SVM limit; analog chain is not limiting at this f_sw.';col='var(--ok)';}
+  else if(mss>=0.85){interp='Good — usable for most field-weakening-free operation; top of the range is trimmed.';col='var(--accent)';}
+  else if(mss>=0.6){interp='Fair — significant voltage headroom lost; consider lower f_sw or faster settling.';col='var(--warn)';}
+  else{interp='Poor — t_req is too large for this f_sw; single-shunt full-angle operation is heavily restricted.';col='var(--bad)';}
+  $('r_interp').innerHTML='<span style="color:'+col+'">'+interp+'</span>';
+
+  // sweep plot
+  const F=[],SS=[],DU=[];
+  for(let f=4;f<=150;f+=1){const Tsw=1000/f;F.push(f);SS.push(mMaxSS(s.t_req,Tsw));DU.push(mMaxDual(s.t_req,Tsw));}
+  Plotly.react('plot_sweep',[
+    {x:F,y:SS,name:'single-shunt',mode:'lines',line:{color:'#4da3ff',width:3}},
+    {x:F,y:DU,name:'dual-shunt',mode:'lines',line:{color:'#37c871',width:2,dash:'dash'}},
+    {x:[s.fsw,s.fsw],y:[0,1.05],name:'f_sw',mode:'lines',line:{color:'#f0a93b',width:1.5,dash:'dot'},showlegend:false}
+  ],{...BASE_LAYOUT,xaxis:{...AX,title:'f_sw (kHz)'},yaxis:{...AX,title:'m_max',range:[0,1.08]}},PLOTCFG);
+}
+
+// ===================== TAB 2 =====================
+function renderHex(){
+  const s=state();
+  const bh=blindHalf(s.t_req,s.Tsw,s.m);          // rad
+  $('h_treq').textContent=fmt(s.t_req,2)+' µs';
+  $('h_tsw').textContent=fmt(s.Tsw,2)+' µs';
+  $('h_blind').textContent=fmt(bh*180/Math.PI,1)+'°';
+  const frac=Math.max(0,1-(2*bh)/(Math.PI/3));
+  $('h_frac').textContent=fmt(frac*100,0)+'%';
+
+  const Rv=2/S3; // hexagon vertex radius so inscribed circle (m=1) has radius 1
+  const traces=[];
+  // hexagon outline
+  const hx=[],hy=[];
+  for(let i=0;i<=6;i++){const a=Math.PI/3*i;hx.push(Rv*Math.cos(a));hy.push(Rv*Math.sin(a));}
+  traces.push({x:hx,y:hy,mode:'lines',line:{color:'#5b6b7d',width:2},name:'hexagon',hoverinfo:'skip'});
+  // linear-limit circle m=1
+  const cx=[],cy=[],ox=[],oy=[];
+  for(let i=0;i<=120;i++){const a=2*Math.PI*i/120;cx.push(Math.cos(a));cy.push(Math.sin(a));ox.push(s.m*Math.cos(a));oy.push(s.m*Math.sin(a));}
+  traces.push({x:cx,y:cy,mode:'lines',line:{color:'#3a4756',width:1,dash:'dot'},name:'m = 1',hoverinfo:'skip'});
+  // operating disk radius m
+  traces.push({x:ox,y:oy,mode:'lines',fill:'toself',fillcolor:'rgba(55,200,113,.12)',
+               line:{color:'#37c871',width:1.5},name:'operating m='+fmt(s.m,2),hoverinfo:'skip'});
+  // blind wedges centred on each active-vector direction (k*60°)
+  if(bh>0){
+    for(let k=0;k<6;k++){
+      const c=Math.PI/3*k, wx=[0],wy=[0];
+      for(let i=0;i<=16;i++){const a=c-bh+(2*bh)*i/16;wx.push(Rv*Math.cos(a));wy.push(Rv*Math.sin(a));}
+      wx.push(0);wy.push(0);
+      traces.push({x:wx,y:wy,mode:'lines',fill:'toself',fillcolor:'rgba(239,91,91,.28)',
+        line:{color:'rgba(239,91,91,.5)',width:0.5},name:k===0?'blind zone':'',
+        showlegend:k===0,hoverinfo:'skip'});
+    }
+  }
+  const L={...BASE_LAYOUT,margin:{l:30,r:20,t:10,b:30},
+    xaxis:{...AX,range:[-1.3,1.3],zeroline:true,scaleanchor:'y',scaleratio:1},
+    yaxis:{...AX,range:[-1.3,1.3],zeroline:true}};
+  Plotly.react('plot_hex',traces,L,PLOTCFG);
+}
+
+// ===================== TAB 3 =====================
+function renderDuty(){
+  const s=state();
+  $('o_th').textContent=s.th+'°';
+  const thr=s.th*Math.PI/180;
+  // duty curves
+  const ang=[],da=[],db=[],dc=[];
+  for(let d=0;d<=360;d+=1){const du=svmDuties(s.m,d*Math.PI/180);ang.push(d);da.push(du[0]);db.push(du[1]);dc.push(du[2]);}
+  Plotly.react('plot_duty',[
+    {x:ang,y:da,name:'duty A',mode:'lines',line:{color:'#ef5b5b',width:2}},
+    {x:ang,y:db,name:'duty B',mode:'lines',line:{color:'#37c871',width:2}},
+    {x:ang,y:dc,name:'duty C',mode:'lines',line:{color:'#4da3ff',width:2}},
+    {x:[s.th,s.th],y:[0,1],name:'θ',mode:'lines',line:{color:'#f0a93b',width:1.5,dash:'dot'},showlegend:false}
+  ],{...BASE_LAYOUT,xaxis:{...AX,title:'electrical angle (°)',range:[0,360],dtick:60},
+     yaxis:{...AX,title:'duty',range:[0,1]}},PLOTCFG);
+
+  // single PWM period: centered gate pulses for current angle
+  const du=svmDuties(s.m,thr);
+  const off=[4,2,0], col=['#ef5b5b','#37c871','#4da3ff'], lab=['A','B','C'];
+  const periodTraces=[];
+  du.forEach((d,i)=>{
+    const a=(1-d)/2,b=(1+d)/2,y=off[i];
+    periodTraces.push({x:[0,a,a,b,b,1],y:[y,y,y+1,y+1,y,y],mode:'lines',
+      line:{color:col[i],width:2.5,shape:'linear'},name:'gate '+lab[i]+' ('+fmt(d,2)+')'});
+  });
+  Plotly.react('plot_period',periodTraces,{...BASE_LAYOUT,
+    xaxis:{...AX,title:'time (× T_sw)',range:[0,1]},
+    yaxis:{...AX,tickvals:[0.5,2.5,4.5],ticktext:['C','B','A'],range:[-0.4,5.4]}},PLOTCFG);
+
+  // dwell readout + pass/fail
+  const dw=dwell(s.m,thr,s.Tsw);
+  $('d_sec').textContent=dw.sector;
+  $('d_gam').textContent=fmt(dw.gamma*180/Math.PI,1)+'°';
+  $('d_t1').textContent=fmt(dw.t1,3)+' µs';
+  $('d_t2').textContent=fmt(dw.t2,3)+' µs';
+  $('d_treq').textContent=fmt(s.t_req,3)+' µs';
+  const ok1=dw.t1>=s.t_req, ok2=dw.t2>=s.t_req;
+  const p=(ok)=>ok?'<span class="pill ok">≥ t_req</span>':'<span class="pill bad">&lt; t_req — blind</span>';
+  $('d_status').innerHTML='<div class="row" style="margin-top:8px"><span>sample 1 (V1)</span><span>'+p(ok1)+'</span></div>'+
+                          '<div class="row"><span>sample 2 (V2)</span><span>'+p(ok2)+'</span></div>';
+}
+
+// ---- wiring ----
+function renderAll(){renderCalc();renderHex();renderDuty();}
+['adc','op','bm','fsw','m','th'].forEach(id=>$(id).addEventListener('input',renderAll));
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');$(b.dataset.tab).classList.add('active');
+  window.dispatchEvent(new Event('resize'));
+}));
+renderAll();
+</script>
+</body>
+</html>

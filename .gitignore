@@ -1,0 +1,40 @@
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.nav
+*.snm
+*.vrb
+*.dvi
+*.xdv
+*.bcf
+*.run.xml
+*.idx
+*.ilg
+*.ind
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*~
+.vscode/
+.idea/
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Keep generated PDFs out of the repo (uncomment to ignore)
+# *.pdf
