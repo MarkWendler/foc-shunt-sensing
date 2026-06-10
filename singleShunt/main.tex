@@ -265,7 +265,14 @@ Let $f_{sw}=100~\mathrm{kHz}$ ($\Tsw=10~\mu\mathrm{s}$) with $\tacq=0.8~\mu\math
 \midx_{\max,\mathrm{SS}} \approx \frac{2}{\sqrt{3}}\Big(1-\frac{2\cdot1.2}{10}\Big)
 =1.155\cdot 0.76 \approx 0.88,
 \]
-and $\dc_{\max,\mathrm{SS}}\approx 0.94$. The existence bound \eqref{eq:m_min_ss} gives $\midx_{\min,\mathrm{SS}}=0.48$, so unmodified PWM is blind for $\midx<0.48$ \emph{at sector centers} and always near boundaries. If the application needs $\midx>0.88$ with full coverage, the designer must reduce $\treq$ (faster settling), lower $f_{sw}$, or accept blind-zone estimation. An interactive web calculator that implements \eqref{eq:m_max_ss_main}, the blind-zone map \eqref{eq:alpha_blind}, and the SVM duty waveforms is available online \cite{Wendler_calc_2026}, letting readers explore these trade-offs for their own timing budgets.
+and $\dc_{\max,\mathrm{SS}}\approx 0.94$. The existence bound \eqref{eq:m_min_ss} gives $\midx_{\min,\mathrm{SS}}=0.48$, so unmodified PWM is blind for $\midx<0.48$ \emph{at sector centers} and always near boundaries. If the application needs $\midx>0.88$ with full coverage, the designer must reduce $\treq$ (faster settling), lower $f_{sw}$, or accept blind-zone estimation. An interactive web calculator that implements \eqref{eq:m_max_ss_main}, the blind-zone map \eqref{eq:alpha_blind}, and the SVM duty waveforms is available online \cite{Wendler_calc_2026} (Fig.~\ref{fig:calc}), letting readers explore these trade-offs for their own timing budgets.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Drawings/ShuntCurrentSensingCalculator.jpg}
+    \caption{Interactive companion calculator \cite{Wendler_calc_2026}: the analog timing budget $\treq=\tacq+\tblank+\tmargin$ and $f_{sw}$ map to the single-shunt modulation ceiling $\midx_{\max,\mathrm{SS}}$ from \eqref{eq:m_max_ss_main}, with the dual-shunt bound shown for comparison. The sweep panel plots $\midx_{\max,\mathrm{SS}}$ versus $f_{sw}$, the vertical marker indicating the selected frequency.}
+    \label{fig:calc}
+\end{figure}
 
 \subsection{Sensitivity to switching frequency}
 Table~\ref{tab:mmax} evaluates \eqref{eq:m_max_ss_main} across $f_{sw}$ for two settling budgets. The modulation ceiling collapses rapidly at high $f_{sw}$: the same analog chain that comfortably supports near-unity modulation at $10$~kHz is restricted well below the linear limit at $100$~kHz. This is the central design tension---higher $f_{sw}$ reduces current ripple and audible noise but shrinks the single-shunt window.
