@@ -139,7 +139,7 @@
             <div class="row"><span>blind half-angle</span><span id="h_blind">—</span></div>
             <div class="row"><span>measurable fraction / sector</span><span id="h_frac">—</span></div>
           </div>
-          <div class="note">Inner circle = linear limit (m = 1); green disk = operating m; red wedges = blind zones where one active-vector dwell &lt; t_req.</div>
+          <div class="note">Va/Vb/Vc (red/green/blue) are the instantaneous phase-voltage vectors at angle θ; their Clarke sum is Vref (white). Inner circle = linear limit (m = 1); purple dashed = operating radius m; red wedges = blind zones where one active-vector dwell &lt; t_req.</div>
         </div>
         <div>
           <div class="panel">
@@ -254,8 +254,8 @@ function renderHex(){
   const cx=[],cy=[],ox=[],oy=[];
   for(let i=0;i<=120;i++){const a=2*Math.PI*i/120;cx.push(Math.cos(a));cy.push(Math.sin(a));ox.push(s.m*Math.cos(a));oy.push(s.m*Math.sin(a));}
   traces.push({x:cx,y:cy,mode:'lines',line:{color:'#3a4756',width:1,dash:'dot'},name:'m = 1',hoverinfo:'skip'});
-  traces.push({x:ox,y:oy,mode:'lines',fill:'toself',fillcolor:'rgba(55,200,113,.12)',
-               line:{color:'#37c871',width:1.5},name:'operating m='+fmt(s.m,2),hoverinfo:'skip'});
+  traces.push({x:ox,y:oy,mode:'lines',fill:'toself',fillcolor:'rgba(177,140,255,.08)',
+               line:{color:'#b18cff',width:1.5,dash:'dash'},name:'operating m='+fmt(s.m,2),hoverinfo:'skip'});
   if(bh>0){
     for(let k=0;k<6;k++){
       const c=Math.PI/3*k, wx=[0],wy=[0];
@@ -266,7 +266,30 @@ function renderHex(){
         showlegend:k===0,hoverinfo:'skip'});
     }
   }
-  const L={...BASE_LAYOUT,margin:{l:30,r:20,t:10,b:30},
+  // ---- phase voltage vectors (Clarke) and their resultant V_ref ----
+  const th=s.th*Math.PI/180;
+  const dir=[[1,0],
+             [Math.cos(2*Math.PI/3),Math.sin(2*Math.PI/3)],
+             [Math.cos(4*Math.PI/3),Math.sin(4*Math.PI/3)]];
+  const inst=[s.m*Math.cos(th), s.m*Math.cos(th-2*Math.PI/3), s.m*Math.cos(th+2*Math.PI/3)];
+  const pv=dir.map((d,i)=>[inst[i]*d[0], inst[i]*d[1]]);
+  const vref=[(2/3)*(pv[0][0]+pv[1][0]+pv[2][0]), (2/3)*(pv[0][1]+pv[1][1]+pv[2][1])];
+  const vcol=['#ef5b5b','#37c871','#4da3ff'];
+  // faint phase axes
+  dir.forEach((d,i)=>traces.push({x:[-Rv*d[0],Rv*d[0]],y:[-Rv*d[1],Rv*d[1]],mode:'lines',
+    line:{color:vcol[i],width:1,dash:'dot'},opacity:0.30,hoverinfo:'skip',showlegend:false}));
+  // labels at vector tips
+  traces.push({x:[pv[0][0]*1.12,pv[1][0]*1.12,pv[2][0]*1.12,vref[0]*1.14],
+               y:[pv[0][1]*1.12,pv[1][1]*1.12,pv[2][1]*1.12,vref[1]*1.14],
+               mode:'text',text:['Va','Vb','Vc','Vref'],
+               textfont:{size:12,color:[vcol[0],vcol[1],vcol[2],'#ffffff']},
+               showlegend:false,hoverinfo:'skip'});
+  const mkArrow=(p,color,w)=>({x:p[0],y:p[1],ax:0,ay:0,xref:'x',yref:'y',axref:'x',ayref:'y',
+    showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:w,arrowcolor:color});
+  const annotations=[mkArrow(pv[0],vcol[0],2),mkArrow(pv[1],vcol[1],2),
+                     mkArrow(pv[2],vcol[2],2),mkArrow(vref,'#ffffff',3.5)];
+
+  const L={...BASE_LAYOUT,margin:{l:30,r:20,t:10,b:30},annotations:annotations,
     xaxis:{...AX,range:[-1.3,1.3],zeroline:true,scaleanchor:'y',scaleratio:1},
     yaxis:{...AX,range:[-1.3,1.3],zeroline:true}};
   Plotly.react('plot_hex',traces,L,PLOTCFG);
