@@ -61,7 +61,9 @@ PMSM, FOC, single shunt, DC-link current sensing, SVM, ADC acquisition time, mod
 \section{Scope and Contributions}
 FOC of a PMSM relies on precise stator-current feedback that is time-aligned to the PWM carrier \cite{Krause2013,Krishnan2010}. In \emph{sensorless} operation, current-measurement error feeds the observer/PLL and re-emerges as electrical-angle error, increasing torque ripple and copper loss \cite{Vas1998,Holtz2002}. In cost-sensitive embedded drives, single-shunt sensing is attractive but imposes the tightest timing constraints, because all three phase currents must be reconstructed from samples of a single DC-link current captured during limited SVM plateaus \cite{Blaabjerg1997,Bose2002}.
 
-In a companion analysis of dual- and three-shunt timing we showed that, once the system effective number of bits (ENOB) is adequate, the dominant accuracy constraint is whether the analog chain \emph{settles inside} the valid PWM window, and that for dual-shunt sensing the settling budget imposes only an \emph{upper} modulation bound \cite{wendler_enhancing_2025,wendler_analysis_2025}. This paper completes that program for the single-shunt case, which the dual-shunt analysis explicitly deferred.
+
+
+In a companion analysis of dual- and three-shunt timing we showed that, once the system effective number of bits (ENOB) is adequate, the dominant accuracy constraint is whether the analog chain \emph{settles inside} the valid PWM window, and that for dual-shunt sensing the settling budget imposes only an \emph{upper} modulation bound \cite{wendler_enhancing_2025,wendler_analysis_2025}. This paper completes that program for the single-shunt case.
 
 \textbf{Contributions:}
 \begin{itemize}
@@ -73,7 +75,14 @@ In a companion analysis of dual- and three-shunt timing we showed that, once the
 
 % -------------------- Section II --------------------
 \section{Shunt Topologies and Integration Context}
-Table~\ref{tab:topologies} summarizes four common shunt placements used with three-phase inverters \cite{Krause2013,Bose2002,Kester2005}.
+Simplified schematics on figure~\ref{fig:3phase_current_topologies} and table~\ref{tab:topologies} summarizes four common shunt placements used with three-phase inverters \cite{Krause2013,Bose2002,Kester2005}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Drawings/CurrentMeasWithCurrentLabel.png}
+    \caption{3-phase Current sensing topologies}
+    \label{fig:3phase_current_topologies}
+\end{figure}
 
 \begin{table}[t]
 \caption{Shunt topologies: qualitative trade-offs}
@@ -256,7 +265,7 @@ Let $f_{sw}=100~\mathrm{kHz}$ ($\Tsw=10~\mu\mathrm{s}$) with $\tacq=0.8~\mu\math
 \midx_{\max,\mathrm{SS}} \approx \frac{2}{\sqrt{3}}\Big(1-\frac{2\cdot1.2}{10}\Big)
 =1.155\cdot 0.76 \approx 0.88,
 \]
-and $\dc_{\max,\mathrm{SS}}\approx 0.94$. The existence bound \eqref{eq:m_min_ss} gives $\midx_{\min,\mathrm{SS}}=0.48$, so unmodified PWM is blind for $\midx<0.48$ \emph{at sector centers} and always near boundaries. If the application needs $\midx>0.88$ with full coverage, the designer must reduce $\treq$ (faster settling), lower $f_{sw}$, or accept blind-zone estimation.
+and $\dc_{\max,\mathrm{SS}}\approx 0.94$. The existence bound \eqref{eq:m_min_ss} gives $\midx_{\min,\mathrm{SS}}=0.48$, so unmodified PWM is blind for $\midx<0.48$ \emph{at sector centers} and always near boundaries. If the application needs $\midx>0.88$ with full coverage, the designer must reduce $\treq$ (faster settling), lower $f_{sw}$, or accept blind-zone estimation. An interactive web calculator that implements \eqref{eq:m_max_ss_main}, the blind-zone map \eqref{eq:alpha_blind}, and the SVM duty waveforms is available online \cite{Wendler_calc_2026}, letting readers explore these trade-offs for their own timing budgets.
 
 \subsection{Sensitivity to switching frequency}
 Table~\ref{tab:mmax} evaluates \eqref{eq:m_max_ss_main} across $f_{sw}$ for two settling budgets. The modulation ceiling collapses rapidly at high $f_{sw}$: the same analog chain that comfortably supports near-unity modulation at $10$~kHz is restricted well below the linear limit at $100$~kHz. This is the central design tension---higher $f_{sw}$ reduces current ripple and audible noise but shrinks the single-shunt window.
@@ -284,7 +293,7 @@ $150$~kHz & $0.89$ & $0.95$ & $0.74$ & $0.87$\\
 
 % -------------------- Section VII --------------------
 \section{Signal Chain and Mitigation}
-\subsection{Where $\treq$ comes from}
+\subsection{Where the required sampling comes from}
 The acquisition budget is dominated by the analog signal chain, not the ADC core. A discrete or integrated op-amp/PGA must recover from a large common-mode step at each switching edge before its output represents the shunt voltage; this recovery, plus the input-RC of the ADC sampling network, typically sets $\tacq$ \cite{Kester2005,TI_SLAAE96A_2023}. Faster settling---higher gain-bandwidth, lower CM-step amplitude through layout and Kelvin sensing, smaller source impedance---directly widens the usable window and, through \eqref{eq:m_max_ss_main}, raises $\midx_{\max,\mathrm{SS}}$. Because integrated front ends on advanced MCU nodes often favor area and cost over settling time, the achievable single-shunt modulation ceiling is increasingly an analog-IP and process question, not a digital one.
 
 \subsection{Mitigation strategies and their cost}
