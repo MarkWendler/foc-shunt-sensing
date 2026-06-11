@@ -219,8 +219,7 @@ Because $t_2\!\to\!0$ as $\alpha\!\to\!0$ and $t_1\!\to\!0$ as $\alpha\!\to\!\pi
 \end{equation}
 appears at each sector boundary (valid when $0 \le 2\treq/(\midx\Tsw) \le 1$). Higher $\midx$ lengthens the active vectors and \emph{shrinks} the blind zones, but they never vanish: at exactly the boundary one dwell is zero for any $\midx$. The widest measurable region per sector occurs at the sector center $\alpha=\pi/6$, where $t_1=t_2=\midx\Tsw/4$; requiring this best case to exist gives the existence bound
 \begin{equation}
-\boxed{\ \midx \ge \midx_{\min,\mathrm{SS}} = \frac{4\,\treq}{\Tsw}\ }
-\quad\text{(below this, even sector centers are blind).}
+\ \midx \ge \midx_{\min,\mathrm{SS}} = \frac{4\,\treq}{\Tsw}\ 
 \label{eq:m_min_ss}
 \end{equation}
 Operation inside the blind zones requires either PWM shaping (Regime B) or reconstruction strategies that estimate the missing sample.
@@ -260,12 +259,7 @@ so the maximum duty over electrical angle is $\dc_{\max} = (1+\midx)/2$, and com
 % -------------------- Section VI --------------------
 \section{Design Charts and a Worked Example}
 \subsection{Worked example}
-Let $f_{sw}=100~\mathrm{kHz}$ ($\Tsw=10~\mu\mathrm{s}$) with $\tacq=0.8~\mu\mathrm{s}$, $\tblank=0.3~\mu\mathrm{s}$, $\tmargin=0.1~\mu\mathrm{s}$, so $\treq=1.2~\mu\mathrm{s}$. From \eqref{eq:m_max_ss_main},
-\[
-\midx_{\max,\mathrm{SS}} \approx \frac{2}{\sqrt{3}}\Big(1-\frac{2\cdot1.2}{10}\Big)
-=1.155\cdot 0.76 \approx 0.88,
-\]
-and $\dc_{\max,\mathrm{SS}}\approx 0.94$. The existence bound \eqref{eq:m_min_ss} gives $\midx_{\min,\mathrm{SS}}=0.48$, so unmodified PWM is blind for $\midx<0.48$ \emph{at sector centers} and always near boundaries. If the application needs $\midx>0.88$ with full coverage, the designer must reduce $\treq$ (faster settling), lower $f_{sw}$, or accept blind-zone estimation. An interactive web calculator that implements \eqref{eq:m_max_ss_main}, the blind-zone map \eqref{eq:alpha_blind}, and the SVM duty waveforms is available online \cite{Wendler_calc_2026} (Fig.~\ref{fig:calc}), letting readers explore these trade-offs for their own timing budgets.
+We anchor the budget in hardware. Measurements on a DRV8305-based low-side chain with a $65~\Omega/2200~\mathrm{pF}$ input filter (Figs.~\ref{fig:settle}--\ref{fig:xtalk}) give op-amp/PGA settling $\tacq\approx0.8~\mu\mathrm{s}$ and switching-crosstalk blanking $\tblank\approx0.1~\mu\mathrm{s}$; with $\tmargin=0.1~\mu\mathrm{s}$ this is $\treq\approx1.0~\mu\mathrm{s}$. From \eqref{eq:m_max_ss_main}, a typical $f_{sw}=20~\mathrm{kHz}$ ($\Tsw=50~\mu\mathrm{s}$) imposes no modulation limit ($\midx_{\max,\mathrm{SS}}=1$); the budget only bites at high carriers---$f_{sw}=100~\mathrm{kHz}$ gives $\midx_{\max,\mathrm{SS}}=\tfrac{2}{\sqrt{3}}(1-0.2)\approx0.92$ and $\dc_{\max,\mathrm{SS}}\approx0.96$. The companion web calculator \cite{Wendler_calc_2026} (Fig.~\ref{fig:calc}) reproduces these curves, the blind-zone map \eqref{eq:alpha_blind}, and the SVM duty waveforms for any budget.
 
 \begin{figure}[t]
     \centering
@@ -275,23 +269,20 @@ and $\dc_{\max,\mathrm{SS}}\approx 0.94$. The existence bound \eqref{eq:m_min_ss
 \end{figure}
 
 \subsection{Sensitivity to switching frequency}
-Table~\ref{tab:mmax} evaluates \eqref{eq:m_max_ss_main} across $f_{sw}$ for two settling budgets. The modulation ceiling collapses rapidly at high $f_{sw}$: the same analog chain that comfortably supports near-unity modulation at $10$~kHz is restricted well below the linear limit at $100$~kHz. This is the central design tension---higher $f_{sw}$ reduces current ripple and audible noise but shrinks the single-shunt window.
+Table~\ref{tab:mmax} evaluates \eqref{eq:m_max_ss_main} across $f_{sw}$ for the measured budget $\treq\approx1.0~\mu$s. The ceiling stays at the linear limit through typical carriers and only collapses at high $f_{sw}$---the central design tension: higher $f_{sw}$ reduces current ripple and audible noise but shrinks the single-shunt window.
 
 \begin{table}[t]
-\caption{Single-shunt $\midx_{\max,\mathrm{SS}}$ from \eqref{eq:m_max_ss_main} vs.\ $f_{sw}$}
+\caption{Single-shunt limits from \eqref{eq:m_max_ss_main} vs.\ $f_{sw}$ for the measured budget $\treq\approx1.0~\mu$s}
 \label{tab:mmax}
 \centering
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
-& \multicolumn{2}{c}{$\treq=0.75~\mu$s} & \multicolumn{2}{c}{$\treq=1.20~\mu$s}\\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}
-$f_{sw}$ & $\midx_{\max,\mathrm{SS}}$ & $\dc_{\max,\mathrm{SS}}$ & $\midx_{\max,\mathrm{SS}}$ & $\dc_{\max,\mathrm{SS}}$\\
+$f_{sw}$ & $\midx_{\max,\mathrm{SS}}$ & $\dc_{\max,\mathrm{SS}}$\\
 \midrule
-$10$~kHz  & $1.00$ & $1.00$ & $1.00$ & $1.00$\\
-$20$~kHz  & $1.00$ & $1.00$ & $1.00$ & $1.00$\\
-$50$~kHz  & $1.00$ & $1.00$ & $0.98$ & $0.99$\\
-$100$~kHz & $0.98$ & $0.99$ & $0.88$ & $0.94$\\
-$150$~kHz & $0.89$ & $0.95$ & $0.74$ & $0.87$\\
+$20$~kHz  & $1.00$ & $1.00$\\
+$50$~kHz  & $1.00$ & $1.00$\\
+$100$~kHz & $0.92$ & $0.96$\\
+$150$~kHz & $0.81$ & $0.90$\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -300,8 +291,22 @@ $150$~kHz & $0.89$ & $0.95$ & $0.74$ & $0.87$\\
 
 % -------------------- Section VII --------------------
 \section{Signal Chain and Mitigation}
-\subsection{Where the required sampling comes from}
-The acquisition budget is dominated by the analog signal chain, not the ADC core. A discrete or integrated op-amp/PGA must recover from a large common-mode step at each switching edge before its output represents the shunt voltage; this recovery, plus the input-RC of the ADC sampling network, typically sets $\tacq$ \cite{Kester2005,TI_SLAAE96A_2023}. Faster settling---higher gain-bandwidth, lower CM-step amplitude through layout and Kelvin sensing, smaller source impedance---directly widens the usable window and, through \eqref{eq:m_max_ss_main}, raises $\midx_{\max,\mathrm{SS}}$. Because integrated front ends on advanced MCU nodes often favor area and cost over settling time, the achievable single-shunt modulation ceiling is increasingly an analog-IP and process question, not a digital one.
+\subsection{Where the budget comes from: measured settling and blanking}
+The acquisition budget is dominated by the analog signal chain, not the ADC core. An op-amp/PGA must recover from the large common-mode step at each switching edge before its output tracks the shunt voltage; this recovery plus the ADC input-RC sets $\tacq$ \cite{Kester2005,TI_SLAAE96A_2023}. Fig.~\ref{fig:settle} shows this on a DRV8305-based low-side chain with a $65~\Omega/2200~\mathrm{pF}$ filter: after the MOSFET node switches, the amplified phase-current channels settle in $\tacq\approx0.8~\mu\mathrm{s}$. Fig.~\ref{fig:xtalk} shows the complementary effect---switching noise from one leg coupling into another phase's channel---which sets a blanking interval $\tblank\approx0.1~\mu\mathrm{s}$ before a sample is trustworthy. These fix the measured budget $\treq\approx1.0~\mu\mathrm{s}$ used above. Faster settling (higher gain-bandwidth, lower CM-step via Kelvin sensing and layout) raises $\midx_{\max,\mathrm{SS}}$ through \eqref{eq:m_max_ss_main}; since integrated front ends on advanced MCU nodes trade settling for area and cost, the single-shunt ceiling is increasingly an analog-IP and process question.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{Drawings/PhaseSwitchOnCurrent_noise.png}
+\caption{Measured op-amp/PGA settling (Keysight MSO-X 3024T, $500~\mathrm{ns/div}$) on a DRV8305 low-side chain with a $65~\Omega/2200~\mathrm{pF}$ filter. Blue: PWM logic; purple: MOSFET switch-node; yellow and green: the two amplified phase-current channels. After the switching edge the current channels need $\tacq\approx0.8~\mu\mathrm{s}$ to settle.}
+\label{fig:settle}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{Drawings/SwitchingNoiseOnOtherphase.png}
+\caption{Measured switching-noise crosstalk ($1~\mu\mathrm{s/div}$, same channels as Fig.~\ref{fig:settle}): a leg's switching event couples a short burst into another phase's current channel, defining a blanking time $\tblank\approx0.1~\mu\mathrm{s}$.}
+\label{fig:xtalk}
+\end{figure}
 
 \subsection{Mitigation strategies and their cost}
 When the required operating point falls inside a blind zone, the standard remedies trade either voltage headroom or spectral quality:
@@ -324,15 +329,16 @@ All of these are downstream of the same lever: a smaller $\treq$ enlarges the na
 % -------------------- Conclusion --------------------
 \section{Conclusion}
 Single-shunt current sensing converts PWM geometry into an ADC requirement: two settled samples must fit two active-vector plateaus. Grouping analog settling, blanking, and trigger margin into $\treq$, we described the unmodified-PWM blind zones and derived a compact modulation-headroom limit for full-angle reconstruction under center-aligned SVM,
-\[
-\midx_{\max,\mathrm{SS}}=\min\!\left(1,\frac{2}{\sqrt{3}}\left(1-\frac{2\treq}{\Tsw}\right)\right),
+\begin{equation}
+\midx_{\max,\mathrm{SS}}=\min\!\left(1,\frac{2}{\sqrt{3}}\left(1-\frac{2\treq}{\Tsw}\right)\right)
 \qquad
-\dc_{\max,\mathrm{SS}}=\frac{1+\midx_{\max,\mathrm{SS}}}{2}.
-\]
-These equations connect ADC acquisition-time reality to voltage utilization in single-shunt PMSM FOC and give an immediate rule for choosing $f_{sw}$, analog front-end settling, and PWM-shaping strategy. Future work will validate $\treq$ on hardware under PWM-induced transients and quantify the residual angle error of blind-zone estimation against the efficiency targets set by the sensorless budget.
-
-\section*{Acknowledgment}
-This work was supported by {\'O}buda University and the Doctoral School of Applied Informatics and Applied Mathematics.
+\label{eq:conclusion_1}
+\end{equation}
+\begin{equation}
+\dc_{\max,\mathrm{SS}}=\frac{1+\midx_{\max,\mathrm{SS}}}{2}
+\label{eq:conclusion_2}
+\end{equation}
+\eqref{eq:conclusion_1}, \eqref{eq:conclusion_2} equations connect ADC acquisition-time reality to voltage utilization in single-shunt PMSM FOC and give an immediate rule for choosing $f_{sw}$, analog front-end settling, and PWM-shaping strategy. Future work will validate $\treq$ on hardware under PWM-induced transients and quantify the residual angle error of blind-zone estimation against the efficiency targets set by the sensorless budget.
 
 % -------------------- References --------------------
 \bibliographystyle{IEEEtran}
